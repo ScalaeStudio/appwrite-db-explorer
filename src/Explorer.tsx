@@ -12,6 +12,19 @@ import {
 } from '@mui/x-data-grid';
 import { Models, Query } from "node-appwrite";
 import toast from "react-hot-toast";
+import { Button, Dialog, DialogTitle, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+
+type Attributes =
+    Models.AttributeBoolean
+    | Models.AttributeDatetime
+    | Models.AttributeEmail
+    | Models.AttributeEnum
+    | Models.AttributeFloat
+    | Models.AttributeInteger
+    | Models.AttributeIp
+    | Models.AttributeRelationship
+    | Models.AttributeString
+    | Models.AttributeUrl;
 
 export default function Explorer({
     database, collection,
@@ -23,8 +36,10 @@ export default function Explorer({
     const [pagination, setPagination] = useState<GridPaginationModel>({ page: 0, pageSize: 100, });
     const [filter, setFilter] = useState<GridFilterModel>({ items: [], });
     const [sort, setSort] = useState<GridSortModel>([]);
+    const [highlightedArray, setHighlightedArray] = useState<Array<any> | null>(null);
+    const [highlightedArrayField, setHighlightedArrayField] = useState<string | null>(null);
 
-    console.log(sort);
+    console.log({ fields });
 
     const filters: string[] = useMemo<string[]>(() => {
         return filter.items.map(
@@ -97,6 +112,13 @@ export default function Explorer({
         ));
     };
 
+    const getHighlightedArrayField = (): Attributes => {
+        // @ts-expect-error
+        return fields.attributes.find(
+            attr => attr['key'] === highlightedArrayField
+        ) as Attributes;
+    }
+
     useEffect(() => {
         loadFields();
         loadCollection();
@@ -132,7 +154,27 @@ export default function Explorer({
 
         fields.attributes.forEach(attribute => {
 
-            if (attribute['array']) return;
+            if (attribute['array']) {
+                columns.push({
+                    headerName: attribute['key'],
+                    field: attribute['key'],
+                    renderCell: (params) => {
+                        if (!params.value) return "...";
+                        return <Button
+                            onClick={() => {
+                                setHighlightedArray(params.value);
+                                setHighlightedArrayField(params.field);
+                            }}
+                            variant="text">
+                                Array of {params.value.length}
+                            </Button>;
+                    },
+                    width: 150,
+                    filterOperators: [],
+                    hideSortIcons: true,
+                });
+                return;
+            };
 
             if (attribute['type'] === 'string' || attribute['type'] === 'boolean') {
                 columns.push({
@@ -150,28 +192,67 @@ export default function Explorer({
     }
 
     return (
-        <DataGrid
-            rows={data.documents}
-            columns={getColumns()}
-            getRowId={(row) => row.$id}
-            initialState={{
-                pagination: {
-                    paginationModel: {
-                        pageSize: 100,
+        <>
+            <DataGrid
+                rows={data.documents}
+                columns={getColumns()}
+                getRowId={(row) => row.$id}
+                initialState={{
+                    pagination: {
+                        paginationModel: {
+                            pageSize: 100,
+                        },
                     },
-                },
-            }}
-            loading={loading}
-            paginationMode="server"
-            filterMode="server"
-            rowCount={data.total}
-            onPaginationModelChange={setPagination}
-            paginationModel={pagination}
-            onFilterModelChange={setFilter}
-            filterModel={filter}
-            sortingMode="server"
-            onSortModelChange={setSort}
-            disableRowSelectionOnClick
-            />
+                }}
+                loading={loading}
+                paginationMode="server"
+                filterMode="server"
+                rowCount={data.total}
+                onPaginationModelChange={setPagination}
+                paginationModel={pagination}
+                onFilterModelChange={setFilter}
+                filterModel={filter}
+                sortingMode="server"
+                onSortModelChange={setSort}
+                disableRowSelectionOnClick
+                />
+            <Dialog open={highlightedArray !== null} onClose={() => setHighlightedArray(null)}>
+
+                <DialogTitle>{getHighlightedArrayField()?.key}</DialogTitle>
+                <TableContainer component={Paper}>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>
+                                    ID
+                                </TableCell>
+                                {
+                                    getHighlightedArrayField()?.type !== 'relationship' && (
+                                        <TableCell>Value</TableCell>
+                                    )
+                                }
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {
+                                highlightedArray?.map((item, index) => (
+                                    <TableRow
+                                        key={index}
+                                        >
+                                        <TableCell>{index}</TableCell>
+                                        {
+                                            getHighlightedArrayField()?.type !== 'relationship' && (
+                                                <TableCell sx={{ fontWeight: 'bold' }}>{item}</TableCell>
+                                            )
+                                        }
+                                    </TableRow>
+                                ))
+                            }
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+
+            </Dialog>
+        </>
         );
 }
