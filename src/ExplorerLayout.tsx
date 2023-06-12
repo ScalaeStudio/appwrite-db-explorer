@@ -2,7 +2,6 @@ import { MouseEventHandler, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getClient, getDatabase } from "./appwrite.tsx";
 import { Models } from "node-appwrite";
-import { Button } from "@mui/material";
 import Explorer from "./Explorer.tsx";
 
 function ObjectButton({ name, $id, onClick, active = false }: { 
