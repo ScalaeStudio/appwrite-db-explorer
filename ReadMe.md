@@ -18,3 +18,5 @@ yarn dev
 Once the server is running, go to `http://localhost:5173/` and enter your Appwrite credentials.
 
 Alternatively, you can go to an hosted version here: `https://appwrite-db-explorer.vercel.app`.
+
+> ⚠️ If you want to use the hosted version, you'll need to add vercel as a registered web app in Appwrite dashboard.

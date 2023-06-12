@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getClient, getDatabase } from "./appwrite.tsx";
 import { Models } from "node-appwrite";
 import Explorer from "./Explorer.tsx";
+import { Button } from "@mui/material";
 
 function ObjectButton({ name, $id, onClick, active = false }: { 
     name: string,
@@ -112,6 +113,12 @@ export default function ExplorerLayout() {
                         color: '#333',
                     }}>sponsored by <u>scalae.studio</u></span>
                 </a>
+                <div>
+                    <Button onClick={() => {
+                        localStorage.clear();
+                        navigate('/setup');
+                    }}>Log out</Button>
+                </div>
             </nav>
             <nav style={{
                 borderRight: '1px solid #eee',
