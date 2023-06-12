@@ -68,6 +68,8 @@ export default function ExplorerLayout() {
                 width: '250px',
                 padding: '20px',
                 textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
             }}>
                 <h3>Databases</h3>
                 <div style={{
@@ -88,6 +90,28 @@ export default function ExplorerLayout() {
                         ))
                     }
                 </div>
+                <a style={{
+                    marginTop: 'auto',
+                    width: '100%',
+                    padding: '20px 0px',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    gap: '20px',
+                    alignItems: 'center',
+                    textDecoration: 'none',
+                    fontSize: '14px',
+                }}
+                href="https://scalae.studio" target="_blank">
+                    <img
+                        width="70px"
+                        height="auto"
+                        src="https://scalae.studio/favicon.png"
+                        alt="Scalae logo" />
+                    <span style={{
+                        textAlign: 'left',
+                        color: '#333',
+                    }}>sponsored by <u>scalae.studio</u></span>
+                </a>
             </nav>
             <nav style={{
                 borderRight: '1px solid #eee',
