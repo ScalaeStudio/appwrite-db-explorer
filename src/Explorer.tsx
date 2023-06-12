@@ -8,6 +8,7 @@ import {
     getGridBooleanOperators,
     getGridStringOperators,
     getGridDateOperators,
+    GridSortModel,
 } from '@mui/x-data-grid';
 import { Models, Query } from "node-appwrite";
 import toast from "react-hot-toast";
@@ -21,6 +22,9 @@ export default function Explorer({
     const [loading, setLoading] = useState<boolean>(false);
     const [pagination, setPagination] = useState<GridPaginationModel>({ page: 0, pageSize: 100, });
     const [filter, setFilter] = useState<GridFilterModel>({ items: [], });
+    const [sort, setSort] = useState<GridSortModel>([]);
+
+    console.log(sort);
 
     const filters: string[] = useMemo<string[]>(() => {
         return filter.items.map(
@@ -51,7 +55,15 @@ export default function Explorer({
         );
     }, [ filter ]);
 
-    console.log({ filter });
+    const sorts: string[] = useMemo<string[]>(() => {
+        return sort.map(sort => {
+            if (sort.sort === 'asc') {
+                return Query.orderAsc(sort.field);
+            } else {
+                return Query.orderDesc(sort.field);
+            }
+        });
+    }, [sort]);
 
     const loadCollection = async () => {
         setLoading(true);
@@ -65,6 +77,7 @@ export default function Explorer({
                     Query.limit(pagination.pageSize),
                     Query.offset(pagination.page * pagination.pageSize),
                     ...filters,
+                    ...sorts,
                 ]
             );
             setData(documents);
@@ -87,7 +100,7 @@ export default function Explorer({
     useEffect(() => {
         loadFields();
         loadCollection();
-    }, [database, collection, pagination, filters]);
+    }, [database, collection, pagination, filters, sorts]);
 
     const getColumns = (): GridColDef[] => {
 
@@ -156,6 +169,8 @@ export default function Explorer({
             paginationModel={pagination}
             onFilterModelChange={setFilter}
             filterModel={filter}
+            sortingMode="server"
+            onSortModelChange={setSort}
             disableRowSelectionOnClick
             />
         );
