@@ -204,6 +204,27 @@ export default function Explorer({
                     filterOperators: operators[attribute['type']]
                 });
             }
+
+            if (attribute['type'] === 'relationship') {
+                columns.push({
+                    headerName: attribute['key'],
+                    field: attribute['key'],
+                    width: 150,
+                    filterOperators: [],
+                    hideSortIcons: true,
+                    renderCell: (params) => {
+                        if (!params.value) return "...";
+                        return <Button
+                            onClick={() => {
+                                setHighlightedArray([params.value]);
+                                setHighlightedArrayField(getHighlightedArrayField(params.field));
+                            }}
+                            variant="text">
+                                Relationship
+                            </Button>;
+                    },
+                });
+            }
         });
 
         return columns;
@@ -286,7 +307,7 @@ export default function Explorer({
                                         <TableCell>{item.$id}</TableCell>
                                         {
                                             relatedCollectionFields.attributes.map(attr => (
-                                                <TableCell>{item[attr['key']].toString()}</TableCell>
+                                                <TableCell>{item[attr['key']]?.toString()}</TableCell>
                                             ))
                                         }
                                     </TableRow>
