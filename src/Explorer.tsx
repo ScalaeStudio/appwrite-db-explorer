@@ -201,7 +201,7 @@ export default function Explorer({
                     type: attribute['type'],
                     width: 250,
                     editable: true,
-                    filterOperators: operators[attribute['type']]
+                    filterOperators: operators[attribute['type']],
                 });
             }
 
@@ -230,6 +230,37 @@ export default function Explorer({
         return columns;
     }
 
+    const editRow = (newRow: Models.Document, oldRow: Models.Document, c) => {
+        return new Promise<Models.Document>(resolve => {
+
+            let change: string | null = null;
+            fields.attributes.forEach(attr => {
+                if (oldRow[attr['key']] !== newRow[attr['key']]) {
+                    change = attr['key'];
+                }
+            });
+            if (!change) return resolve(oldRow);
+
+            const result = confirm("⚠️ You're about to edit one cell. Are you sure?");
+            if (!result) return resolve(oldRow);
+            const db = getDatabase();
+            const update = {};
+            update[change] = newRow[change];
+            toast.promise(db.updateDocument(
+                database,
+                collection,
+                newRow.$id,
+                update,
+            ), {
+                loading: 'Editing document...',
+                success: 'Successfully edited the document',
+                error: (err) => `Cannot edit the document: ${err}`
+            })
+            .then(() => resolve(newRow))
+            .catch(() => resolve(oldRow));
+        });
+    }
+
     return (
         <>
             <DataGrid
@@ -253,6 +284,7 @@ export default function Explorer({
                 filterModel={filter}
                 sortingMode="server"
                 onSortModelChange={setSort}
+                processRowUpdate={editRow}
                 disableRowSelectionOnClick
                 />
             <Dialog open={highlightedArray !== null} onClose={() => setHighlightedArray(null)}>
