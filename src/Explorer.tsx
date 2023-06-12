@@ -37,9 +37,8 @@ export default function Explorer({
     const [filter, setFilter] = useState<GridFilterModel>({ items: [], });
     const [sort, setSort] = useState<GridSortModel>([]);
     const [highlightedArray, setHighlightedArray] = useState<Array<any> | null>(null);
-    const [highlightedArrayField, setHighlightedArrayField] = useState<string | null>(null);
-
-    console.log({ fields });
+    const [highlightedArrayField, setHighlightedArrayField] = useState<Attributes | null>(null);
+    const [relatedCollectionFields, setRelatedCollectionFields] = useState<Models.AttributeList>({ total: 0, attributes: [] });
 
     const filters: string[] = useMemo<string[]>(() => {
         return filter.items.map(
@@ -112,17 +111,32 @@ export default function Explorer({
         ));
     };
 
-    const getHighlightedArrayField = (): Attributes => {
+    const getHighlightedArrayField = (field: string): Attributes => {
         // @ts-expect-error
         return fields.attributes.find(
-            attr => attr['key'] === highlightedArrayField
+            attr => attr['key'] === field
         ) as Attributes;
     }
+
+    const loadRelatedCollectionFields = async () => {
+        if (!highlightedArrayField) return;
+        const db = getDatabase();
+        setRelatedCollectionFields(await db.listAttributes(
+            database,
+            (highlightedArrayField as Models.AttributeRelationship).relatedCollection,
+        ));
+    };
 
     useEffect(() => {
         loadFields();
         loadCollection();
     }, [database, collection, pagination, filters, sorts]);
+
+    useEffect(() => {
+        if (highlightedArrayField !== null) {
+            loadRelatedCollectionFields();
+        }
+    }, [highlightedArrayField]);
 
     const getColumns = (): GridColDef[] => {
 
@@ -154,6 +168,10 @@ export default function Explorer({
 
         fields.attributes.forEach(attribute => {
 
+            if (attribute['type'] === 'relationship' && attribute['relationType'].endsWith('ToMany')) {
+                attribute['array'] = true;
+            }
+
             if (attribute['array']) {
                 columns.push({
                     headerName: attribute['key'],
@@ -163,7 +181,7 @@ export default function Explorer({
                         return <Button
                             onClick={() => {
                                 setHighlightedArray(params.value);
-                                setHighlightedArrayField(params.field);
+                                setHighlightedArrayField(getHighlightedArrayField(params.field));
                             }}
                             variant="text">
                                 Array of {params.value.length}
@@ -218,32 +236,58 @@ export default function Explorer({
                 />
             <Dialog open={highlightedArray !== null} onClose={() => setHighlightedArray(null)}>
 
-                <DialogTitle>{getHighlightedArrayField()?.key}</DialogTitle>
+                <DialogTitle>{highlightedArrayField?.key}</DialogTitle>
                 <TableContainer component={Paper}>
                     <Table size="small">
                         <TableHead>
-                            <TableRow>
-                                <TableCell>
-                                    ID
-                                </TableCell>
-                                {
-                                    getHighlightedArrayField()?.type !== 'relationship' && (
-                                        <TableCell>Value</TableCell>
-                                    )
-                                }
-                            </TableRow>
+                        {
+                            highlightedArrayField?.type !== 'relationship' && (
+                                <TableRow>
+                                    <TableCell>
+                                        ID
+                                    </TableCell>
+                                    <TableCell>Value</TableCell>
+                                </TableRow>
+                            )
+                        }
+                        {
+                            highlightedArrayField?.type === 'relationship' && (
+                                <TableRow>
+                                    <TableCell>$id</TableCell>
+                                    {
+                                        relatedCollectionFields.attributes.map(attr => (
+                                            <TableCell>{attr['key']}</TableCell>
+                                        ))
+                                    }
+                                </TableRow>
+                            )
+                        }
                         </TableHead>
                         <TableBody>
                             {
-                                highlightedArray?.map((item, index) => (
+                                highlightedArrayField?.type !== 'relationship' && highlightedArray?.map((item, index) => (
                                     <TableRow
                                         key={index}
                                         >
                                         <TableCell>{index}</TableCell>
                                         {
-                                            getHighlightedArrayField()?.type !== 'relationship' && (
+                                            highlightedArrayField?.type !== 'relationship' && (
                                                 <TableCell sx={{ fontWeight: 'bold' }}>{item}</TableCell>
                                             )
+                                        }
+                                    </TableRow>
+                                ))
+                            }
+                            {
+                                highlightedArrayField?.type === 'relationship' && highlightedArray?.map((item, index) => (
+                                    <TableRow
+                                        key={index}
+                                        >
+                                        <TableCell>{item.$id}</TableCell>
+                                        {
+                                            relatedCollectionFields.attributes.map(attr => (
+                                                <TableCell>{item[attr['key']].toString()}</TableCell>
+                                            ))
                                         }
                                     </TableRow>
                                 ))
