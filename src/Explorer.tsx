@@ -9,7 +9,6 @@ import {
     getGridStringOperators,
     getGridDateOperators,
     GridSortModel,
-    GridValueGetterParams,
     GridRenderCellParams,
 } from '@mui/x-data-grid';
 import { Models, Query } from "node-appwrite";
@@ -31,8 +30,13 @@ type Attributes =
     | Models.AttributeUrl;
 
 export default function Explorer({
-    database, collection,
-}: { database: string, collection: string, }) {
+    database, collection, navigateToDocument, selectedDocument = null,
+}: { 
+    database: string,
+    collection: string,
+    navigateToDocument: (collection: string, documentId: string) => void,
+    selectedDocument?: string,
+}) {
 
     const [data, setData] = useState<Models.DocumentList<Models.Document>>({ total: 0, documents: [] });
     const [fields, setFields] = useState<Models.AttributeList>({ total: 0, attributes: [] });
@@ -42,12 +46,11 @@ export default function Explorer({
     const [sort, setSort] = useState<GridSortModel>([]);
     const [highlightedArray, setHighlightedArray] = useState<Array<any> | null>(null);
     const [highlightedArrayField, setHighlightedArrayField] = useState<Attributes | null>(null);
-    const [relatedCollectionFields, setRelatedCollectionFields] = useState<Models.AttributeList>({ total: 0, attributes: [] });
 
     const filters: string[] = useMemo<string[]>(() => {
         return filter.items.map(
             filter => {
-                if (filter.operator === 'equals') {
+                if (filter.operator === 'equals' && filter.value) {
                     return Query.equal(filter.field, filter.value);
                 }
                 if (filter.operator === 'contains' && filter.value) {
@@ -122,25 +125,22 @@ export default function Explorer({
         ) as Attributes;
     }
 
-    const loadRelatedCollectionFields = async () => {
-        if (!highlightedArrayField) return;
-        const db = getDatabase();
-        setRelatedCollectionFields(await db.listAttributes(
-            database,
-            (highlightedArrayField as Models.AttributeRelationship).relatedCollection,
-        ));
-    };
-
     useEffect(() => {
         loadFields();
         loadCollection();
     }, [database, collection, pagination, filters, sorts]);
 
     useEffect(() => {
-        if (highlightedArrayField !== null) {
-            loadRelatedCollectionFields();
-        }
-    }, [highlightedArrayField]);
+        if (!selectedDocument) return;
+        setHighlightedArray(null);
+        setTimeout(() => {
+            setFilter({ items: [...filter.items, {
+                field: '$id',
+                operator: 'equals',
+                value: selectedDocument,
+            }] });
+        }, 1000);
+    }, [selectedDocument]);
 
     const getColumns = (): GridColDef[] => {
 
@@ -218,7 +218,9 @@ export default function Explorer({
                     hideSortIcons: true,
                     renderCell: (params) => {
                         if (!params.value) return "...";
-                        return <RelationshipPreview document={params.value} />;
+                        return <RelationshipPreview
+                                    navigateToDocument={navigateToDocument}
+                                    document={params.value} />;
                     },
                 });
             }
@@ -231,7 +233,7 @@ export default function Explorer({
         if (!highlightedArray || !highlightedArrayField) return [];
 
         const renderCell = highlightedArrayField.type === 'relationship' ? (params: GridRenderCellParams) => {
-            return <RelationshipPreview document={params.value} />;
+            return <RelationshipPreview document={params.value} navigateToDocument={navigateToDocument} />;
         } : null;
 
         return [

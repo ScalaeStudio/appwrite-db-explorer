@@ -28,6 +28,13 @@ export default function ExplorerLayout() {
     const [selectedDatabase, setSelectedDatabase] = useState<string | null>(null);
     const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
 
+    const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
+
+    const navigateToDocument = (collection: string, documentId: string) => {
+        setSelectedCollection(collection);
+        setSelectedDocument(documentId);
+    }
+
     const loadDatabases = async () => {
         const db = getDatabase();
         setDatabases(await db.list());
@@ -147,7 +154,11 @@ export default function ExplorerLayout() {
                 </div>
             </nav>
             { selectedDatabase && selectedCollection && (
-                <Explorer database={selectedDatabase} collection={selectedCollection} />
+                <Explorer
+                    selectedDocument={selectedDocument}
+                    navigateToDocument={navigateToDocument}
+                    database={selectedDatabase}
+                    collection={selectedCollection} />
             ) }
         </div>
     );

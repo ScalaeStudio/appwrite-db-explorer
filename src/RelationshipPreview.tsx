@@ -1,4 +1,5 @@
-import { Popover } from "@mui/material";
+import { OpenInFull } from "@mui/icons-material";
+import { Button, Popover } from "@mui/material";
 import { Models } from "node-appwrite";
 import { useState } from "react";
 
@@ -11,7 +12,11 @@ const columnsToIgnore = [
 
 export default function RelationshipPreview({
     document,
-}: { document: Models.Document, }) {
+    navigateToDocument,
+}: {
+    document: Models.Document,
+    navigateToDocument: (collection: string, documentId: string) => void,
+}) {
 
     const [open, setOpen] = useState<boolean>(false);
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -56,7 +61,9 @@ export default function RelationshipPreview({
                                 {
                                     typeof document[key] === 'object'
                                     && document[key].$id
-                                    && <span style={{ fontWeight: 'bold' }}>{document[key].$id}</span>
+                                    && <RelationshipPreview
+                                            document={document[key]}
+                                            navigateToDocument={navigateToDocument} />
                                 }
                                 {
                                     Array.isArray(document[key])
@@ -65,6 +72,10 @@ export default function RelationshipPreview({
                             </div>
                         ))
                     }
+                    <Button
+                        startIcon={<OpenInFull />}
+                        onClick={() => navigateToDocument(document.$collectionId, document.$id)}
+                        >Open</Button>
                 </div>
         </Popover>
         </>
