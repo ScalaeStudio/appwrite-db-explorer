@@ -9,10 +9,14 @@ import {
     getGridStringOperators,
     getGridDateOperators,
     GridSortModel,
+    GridValueGetterParams,
+    GridRenderCellParams,
 } from '@mui/x-data-grid';
 import { Models, Query } from "node-appwrite";
 import toast from "react-hot-toast";
-import { Button, Dialog, DialogTitle, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import { Button, Drawer, IconButton } from "@mui/material";
+import { ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
+import RelationshipPreview from "./RelationshipPreview";
 
 type Attributes =
     Models.AttributeBoolean
@@ -209,19 +213,12 @@ export default function Explorer({
                 columns.push({
                     headerName: attribute['key'],
                     field: attribute['key'],
-                    width: 150,
+                    width: 200,
                     filterOperators: [],
                     hideSortIcons: true,
                     renderCell: (params) => {
                         if (!params.value) return "...";
-                        return <Button
-                            onClick={() => {
-                                setHighlightedArray([params.value]);
-                                setHighlightedArrayField(getHighlightedArrayField(params.field));
-                            }}
-                            variant="text">
-                                Relationship
-                            </Button>;
+                        return <RelationshipPreview document={params.value} />;
                     },
                 });
             }
@@ -230,7 +227,56 @@ export default function Explorer({
         return columns;
     }
 
-    const editRow = (newRow: Models.Document, oldRow: Models.Document, c) => {
+    const getArrayColumns = (): GridColDef[] => {
+        if (!highlightedArray || !highlightedArrayField) return [];
+
+        const renderCell = highlightedArrayField.type === 'relationship' ? (params: GridRenderCellParams) => {
+            return <RelationshipPreview document={params.value} />;
+        } : null;
+
+        return [
+            {
+                headerName: 'ID',
+                field: 'index',
+                width: 100,
+                type: 'number',
+            },
+            {
+                headerName: highlightedArrayField.key,
+                field: 'value',
+                type: highlightedArrayField.type,
+                width: 400,
+                renderCell,
+                editable: true,
+            },
+            {
+                headerName: '',
+                field: 'action',
+                width: 150,
+                renderCell: (params: GridRenderCellParams) => {
+                    return (
+                        <>
+                            <IconButton aria-label="delete">
+                                <Delete />
+                            </IconButton>
+                            <IconButton
+                                aria-label="up"
+                                disabled={params.row.index === 0}>
+                                <ArrowUpward />
+                            </IconButton>
+                            <IconButton
+                                aria-label="down"
+                                disabled={params.row.index === highlightedArray?.length - 1}>
+                                <ArrowDownward />
+                            </IconButton>
+                        </>
+                    );
+                },
+            }
+        ];
+    }
+
+    const editRow = (newRow: Models.Document, oldRow: Models.Document) => {
         return new Promise<Models.Document>(resolve => {
 
             let change: string | null = null;
@@ -287,69 +333,22 @@ export default function Explorer({
                 processRowUpdate={editRow}
                 disableRowSelectionOnClick
                 />
-            <Dialog open={highlightedArray !== null} onClose={() => setHighlightedArray(null)}>
 
-                <DialogTitle>{highlightedArrayField?.key}</DialogTitle>
-                <TableContainer component={Paper}>
-                    <Table size="small">
-                        <TableHead>
-                        {
-                            highlightedArrayField?.type !== 'relationship' && (
-                                <TableRow>
-                                    <TableCell>
-                                        ID
-                                    </TableCell>
-                                    <TableCell>Value</TableCell>
-                                </TableRow>
-                            )
-                        }
-                        {
-                            highlightedArrayField?.type === 'relationship' && (
-                                <TableRow>
-                                    <TableCell>$id</TableCell>
-                                    {
-                                        relatedCollectionFields.attributes.map(attr => (
-                                            <TableCell>{attr['key']}</TableCell>
-                                        ))
-                                    }
-                                </TableRow>
-                            )
-                        }
-                        </TableHead>
-                        <TableBody>
-                            {
-                                highlightedArrayField?.type !== 'relationship' && highlightedArray?.map((item, index) => (
-                                    <TableRow
-                                        key={index}
-                                        >
-                                        <TableCell>{index}</TableCell>
-                                        {
-                                            highlightedArrayField?.type !== 'relationship' && (
-                                                <TableCell sx={{ fontWeight: 'bold' }}>{item}</TableCell>
-                                            )
-                                        }
-                                    </TableRow>
-                                ))
-                            }
-                            {
-                                highlightedArrayField?.type === 'relationship' && highlightedArray?.map((item, index) => (
-                                    <TableRow
-                                        key={index}
-                                        >
-                                        <TableCell>{item.$id}</TableCell>
-                                        {
-                                            relatedCollectionFields.attributes.map(attr => (
-                                                <TableCell>{item[attr['key']]?.toString()}</TableCell>
-                                            ))
-                                        }
-                                    </TableRow>
-                                ))
-                            }
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-
-            </Dialog>
+            <Drawer
+                anchor='right'
+                open={highlightedArray !== null}
+                onClose={() => setHighlightedArray(null)}
+                >
+                    {highlightedArray && highlightedArrayField && (
+                        <DataGrid
+                            columns={getArrayColumns()}
+                            rows={highlightedArray?.map((value, index) => ({ value, index }))}
+                            getRowId={(row) => row.index}
+                            disableRowSelectionOnClick
+                            />
+                    )}
+            </Drawer>
+            
         </>
         );
 }
