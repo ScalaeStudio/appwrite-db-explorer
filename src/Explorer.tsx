@@ -14,7 +14,7 @@ import {
 import { Models, Query } from "node-appwrite";
 import toast from "react-hot-toast";
 import { Button, Drawer, IconButton } from "@mui/material";
-import { ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
+import { ArrowDownward, ArrowUpward, Delete, AddCircle } from "@mui/icons-material";
 import RelationshipPreview from "./RelationshipPreview";
 
 type Attributes =
@@ -251,6 +251,56 @@ export default function Explorer({
         .then(() => setHighlightedArray(newArray));
     }
 
+    const createArrayItem = async () => {
+        const item = prompt('Add a new item');
+        if (!item) return;
+
+        const newArray = [...highlightedArray];
+        newArray.push(item);
+
+        const db = getDatabase();
+        const update = {};
+        update[highlightedArrayField.key] = newArray;
+        toast.promise(db.updateDocument(
+            database,
+            collection,
+            highlightedArrayDocument,
+            update,
+        ), {
+            loading: 'Updating array',
+            success: () => {
+                setHighlightedArray(newArray);
+                return 'Array updated';
+            },
+            error: (err) => `Cannot update array: ${err}`,
+        })
+    }
+
+    const deleteArrayItem = async (index: number) => {
+        const confirmation = confirm('⚠️ You\'re about to delete one array item');
+        if (!confirmation) return;
+
+        const newArray = [...highlightedArray];
+        newArray.splice(index, 1);
+
+        const db = getDatabase();
+        const update = {};
+        update[highlightedArrayField.key] = newArray;
+        toast.promise(db.updateDocument(
+            database,
+            collection,
+            highlightedArrayDocument,
+            update,
+        ), {
+            loading: 'Updating array',
+            success: () => {
+                setHighlightedArray(newArray);
+                return 'Array updated';
+            },
+            error: (err) => `Cannot update array: ${err}`,
+        })
+    }
+
     const getArrayColumns = (): GridColDef[] => {
         if (!highlightedArray || !highlightedArrayField) return [];
 
@@ -280,7 +330,9 @@ export default function Explorer({
                 renderCell: (params: GridRenderCellParams) => {
                     return (
                         <>
-                            <IconButton aria-label="delete">
+                            <IconButton
+                                onClick={() => deleteArrayItem(params.row.index)}
+                                aria-label="delete">
                                 <Delete />
                             </IconButton>
                             <IconButton
@@ -370,12 +422,19 @@ export default function Explorer({
                 onClose={() => setHighlightedArray(null)}
                 >
                     {highlightedArray && highlightedArrayField && (
+                        <>
+                        <div>
+                            <IconButton>
+                                <AddCircle onClick={() => createArrayItem()} />
+                            </IconButton>
+                        </div>
                         <DataGrid
                             columns={getArrayColumns()}
                             rows={highlightedArray?.map((value, index) => ({ value, index }))}
                             getRowId={(row) => row.index}
                             disableRowSelectionOnClick
                             />
+                        </>
                     )}
             </Drawer>
         </>
