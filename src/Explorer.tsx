@@ -46,6 +46,7 @@ export default function Explorer({
     const [sort, setSort] = useState<GridSortModel>([]);
     const [highlightedArray, setHighlightedArray] = useState<Array<any> | null>(null);
     const [highlightedArrayField, setHighlightedArrayField] = useState<Attributes | null>(null);
+    const [highlightedArrayDocument, setHighlightedArrayDocument] = useState<string | null>(null);
 
     const filters: string[] = useMemo<string[]>(() => {
         return filter.items.map(
@@ -186,6 +187,7 @@ export default function Explorer({
                             onClick={() => {
                                 setHighlightedArray(params.value);
                                 setHighlightedArrayField(getHighlightedArrayField(params.field));
+                                setHighlightedArrayDocument(params.row.$id);
                             }}
                             variant="text">
                                 Array of {params.value.length}
@@ -229,6 +231,26 @@ export default function Explorer({
         return columns;
     }
 
+    const moveArrayItem = async (fromIndex: number, toIndex: number) => {
+        const db = getDatabase();
+        const newArray = [...highlightedArray];
+        newArray.splice(toIndex, 0, newArray.splice(fromIndex, 1)[0]);
+
+        const update = {};
+        update[highlightedArrayField.key] = newArray;
+        toast.promise(db.updateDocument(
+            database,
+            collection,
+            highlightedArrayDocument,
+            update,
+        ), {
+            loading: 'Updating array',
+            success: 'Array updated',
+            error: (err) => `Cannot update array: ${err}`,
+        })
+        .then(() => setHighlightedArray(newArray));
+    }
+
     const getArrayColumns = (): GridColDef[] => {
         if (!highlightedArray || !highlightedArrayField) return [];
 
@@ -263,11 +285,17 @@ export default function Explorer({
                             </IconButton>
                             <IconButton
                                 aria-label="up"
+                                onClick={() => {
+                                    moveArrayItem(params.row.index, params.row.index - 1);
+                                }}
                                 disabled={params.row.index === 0}>
                                 <ArrowUpward />
                             </IconButton>
                             <IconButton
                                 aria-label="down"
+                                onClick={() => {
+                                    moveArrayItem(params.row.index, params.row.index + 1);
+                                }}
                                 disabled={params.row.index === highlightedArray?.length - 1}>
                                 <ArrowDownward />
                             </IconButton>
@@ -350,7 +378,6 @@ export default function Explorer({
                             />
                     )}
             </Drawer>
-            
         </>
         );
 }
