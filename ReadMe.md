@@ -6,6 +6,7 @@ This simple front-end leverages MUI's data grid to:
 - search through collections (full-text, equals, greater than, less than...)
 - sort a collection
 - quickly visualize a relationship
+- quickly edit data
 
 ## How to use
 
