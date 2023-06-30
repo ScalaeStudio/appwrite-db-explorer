@@ -60,7 +60,7 @@ export default function RelationshipPreview({
                                 }
                                 {
                                     typeof document[key] === 'object'
-                                    && document[key].$id
+                                    && document[key]?.$id
                                     && <RelationshipPreview
                                             document={document[key]}
                                             navigateToDocument={navigateToDocument} />
